@@ -1,0 +1,39 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "youtube-community-post-viewer"
+version = "1.0.0"
+description = "A tool to archive YouTube community posts and generate a static HTML viewer"
+readme = "README.md"
+requires-python = ">=3.10"
+license = "MIT"
+keywords = ["youtube", "community", "posts", "archiver", "viewer"]
+dependencies = [
+    "yt-community-post-archiver>=0.1.8",
+    "requests>=2.31.0",
+    "Jinja2>=3.1.2",
+    "python-dateutil>=2.8.2",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=7.0.0",
+    "black>=23.0.0",
+    "isort>=5.12.0",
+]
+
+[project.scripts]
+yt-community-viewer = "src.main:main"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src"]
+
+[tool.black]
+line-length = 100
+target-version = ["py310"]
+
+[tool.isort]
+profile = "black"
+line_length = 100

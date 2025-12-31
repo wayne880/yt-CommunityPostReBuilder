@@ -1,0 +1,696 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% if channel %}{{ channel.name }} - {% endif %}社群貼文存檔</title>
+    <style>
+        :root {
+            --yt-spec-brand-background-primary: #0f0f0f;
+            --yt-spec-brand-background-secondary: #1a1a1a;
+            --yt-spec-text-primary: #f1f1f1;
+            --yt-spec-text-secondary: #aaaaaa;
+            --yt-spec-badge-chip-background: #3ea6ff;
+            --yt-spec-call-to-action: #3ea6ff;
+            --yt-spec-10-percent-layer: rgba(255, 255, 255, 0.1);
+            --yt-spec-outline: rgba(255, 255, 255, 0.2);
+            --yt-spec-members-badge: #2ba640;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: 'Roboto', 'Noto Sans TC', Arial, sans-serif;
+            background-color: var(--yt-spec-brand-background-primary);
+            color: var(--yt-spec-text-primary);
+            line-height: 1.6;
+        }
+
+        /* Header / Banner */
+        .channel-header {
+            position: relative;
+            width: 100%;
+        }
+
+        .channel-banner {
+            width: 100%;
+            height: 200px;
+            object-fit: cover;
+            display: block;
+        }
+
+        .channel-banner-placeholder {
+            width: 100%;
+            height: 200px;
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+        }
+
+        .channel-info {
+            display: flex;
+            align-items: center;
+            padding: 20px 24px;
+            gap: 24px;
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        .channel-avatar {
+            width: 80px;
+            height: 80px;
+            border-radius: 50%;
+            object-fit: cover;
+            border: 2px solid var(--yt-spec-outline);
+        }
+
+        .channel-avatar-placeholder {
+            width: 80px;
+            height: 80px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 32px;
+            font-weight: bold;
+            color: white;
+        }
+
+        .channel-details h1 {
+            font-size: 24px;
+            font-weight: 500;
+            margin-bottom: 4px;
+        }
+
+        .channel-handle {
+            color: var(--yt-spec-text-secondary);
+            font-size: 14px;
+        }
+
+        .channel-stats {
+            font-size: 12px;
+            color: var(--yt-spec-text-secondary);
+            margin-top: 4px;
+        }
+
+        /* Navigation / Filters */
+        .nav-container {
+            background-color: var(--yt-spec-brand-background-secondary);
+            border-bottom: 1px solid var(--yt-spec-outline);
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+
+        .nav-content {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 12px 24px;
+            display: flex;
+            gap: 12px;
+            flex-wrap: wrap;
+            align-items: center;
+        }
+
+        .filter-btn {
+            padding: 8px 16px;
+            border-radius: 8px;
+            border: none;
+            background-color: var(--yt-spec-10-percent-layer);
+            color: var(--yt-spec-text-primary);
+            cursor: pointer;
+            font-size: 14px;
+            transition: background-color 0.2s;
+        }
+
+        .filter-btn:hover {
+            background-color: rgba(255, 255, 255, 0.2);
+        }
+
+        .filter-btn.active {
+            background-color: var(--yt-spec-text-primary);
+            color: var(--yt-spec-brand-background-primary);
+        }
+
+        .search-input {
+            flex: 1;
+            min-width: 200px;
+            padding: 8px 16px;
+            border-radius: 20px;
+            border: 1px solid var(--yt-spec-outline);
+            background-color: var(--yt-spec-brand-background-primary);
+            color: var(--yt-spec-text-primary);
+            font-size: 14px;
+        }
+
+        .search-input:focus {
+            outline: none;
+            border-color: var(--yt-spec-call-to-action);
+        }
+
+        .search-input::placeholder {
+            color: var(--yt-spec-text-secondary);
+        }
+
+        /* Main Content */
+        .main-content {
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 24px;
+        }
+
+        .archive-info {
+            text-align: center;
+            padding: 16px;
+            background-color: var(--yt-spec-brand-background-secondary);
+            border-radius: 12px;
+            margin-bottom: 24px;
+            font-size: 14px;
+            color: var(--yt-spec-text-secondary);
+        }
+
+        /* Post Card */
+        .post-card {
+            background-color: var(--yt-spec-brand-background-secondary);
+            border-radius: 12px;
+            padding: 16px;
+            margin-bottom: 16px;
+            border: 1px solid var(--yt-spec-outline);
+        }
+
+        .post-header {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 12px;
+        }
+
+        .post-avatar {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            object-fit: cover;
+        }
+
+        .post-avatar-placeholder {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        }
+
+        .post-meta {
+            flex: 1;
+        }
+
+        .post-author {
+            font-weight: 500;
+            font-size: 14px;
+        }
+
+        .post-date {
+            font-size: 12px;
+            color: var(--yt-spec-text-secondary);
+        }
+
+        .members-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            padding: 4px 8px;
+            background-color: var(--yt-spec-members-badge);
+            border-radius: 4px;
+            font-size: 12px;
+            font-weight: 500;
+        }
+
+        .members-badge svg {
+            width: 14px;
+            height: 14px;
+        }
+
+        .post-content {
+            font-size: 14px;
+            white-space: pre-wrap;
+            word-wrap: break-word;
+            margin-bottom: 12px;
+        }
+
+        .post-content a {
+            color: var(--yt-spec-call-to-action);
+            text-decoration: none;
+        }
+
+        .post-content a:hover {
+            text-decoration: underline;
+        }
+
+        /* Post Images */
+        .post-images {
+            display: grid;
+            gap: 8px;
+            margin-bottom: 12px;
+            border-radius: 12px;
+            overflow: hidden;
+        }
+
+        .post-images.single {
+            grid-template-columns: 1fr;
+        }
+
+        .post-images.double {
+            grid-template-columns: 1fr 1fr;
+        }
+
+        .post-images.multiple {
+            grid-template-columns: repeat(2, 1fr);
+        }
+
+        .post-image {
+            width: 100%;
+            max-height: 500px;
+            object-fit: cover;
+            cursor: pointer;
+            transition: opacity 0.2s;
+        }
+
+        .post-image:hover {
+            opacity: 0.9;
+        }
+
+        /* Poll */
+        .poll-container {
+            background-color: var(--yt-spec-10-percent-layer);
+            border-radius: 8px;
+            padding: 12px;
+            margin-bottom: 12px;
+        }
+
+        .poll-option {
+            background-color: var(--yt-spec-brand-background-primary);
+            border-radius: 4px;
+            padding: 8px 12px;
+            margin-bottom: 8px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .poll-option:last-child {
+            margin-bottom: 0;
+        }
+
+        .poll-bar {
+            position: absolute;
+            left: 0;
+            top: 0;
+            height: 100%;
+            background-color: var(--yt-spec-call-to-action);
+            opacity: 0.3;
+            transition: width 0.3s;
+        }
+
+        .poll-text {
+            position: relative;
+            z-index: 1;
+            display: flex;
+            justify-content: space-between;
+        }
+
+        /* Post Actions */
+        .post-actions {
+            display: flex;
+            gap: 16px;
+            padding-top: 12px;
+            border-top: 1px solid var(--yt-spec-outline);
+        }
+
+        .action-btn {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            background: none;
+            border: none;
+            color: var(--yt-spec-text-secondary);
+            font-size: 13px;
+            cursor: pointer;
+            padding: 8px 0;
+        }
+
+        .action-btn svg {
+            width: 20px;
+            height: 20px;
+        }
+
+        .action-btn:hover {
+            color: var(--yt-spec-text-primary);
+        }
+
+        .post-link {
+            margin-left: auto;
+            color: var(--yt-spec-call-to-action);
+            text-decoration: none;
+            font-size: 13px;
+        }
+
+        .post-link:hover {
+            text-decoration: underline;
+        }
+
+        /* Image Modal */
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.95);
+            justify-content: center;
+            align-items: center;
+        }
+
+        .modal.active {
+            display: flex;
+        }
+
+        .modal-content {
+            max-width: 90%;
+            max-height: 90%;
+            object-fit: contain;
+        }
+
+        .modal-close {
+            position: absolute;
+            top: 20px;
+            right: 30px;
+            color: white;
+            font-size: 40px;
+            cursor: pointer;
+        }
+
+        /* Empty State */
+        .empty-state {
+            text-align: center;
+            padding: 48px;
+            color: var(--yt-spec-text-secondary);
+        }
+
+        .empty-state svg {
+            width: 64px;
+            height: 64px;
+            margin-bottom: 16px;
+            opacity: 0.5;
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .channel-info {
+                flex-direction: column;
+                text-align: center;
+            }
+
+            .nav-content {
+                justify-content: center;
+            }
+
+            .search-input {
+                width: 100%;
+            }
+
+            .main-content {
+                padding: 16px;
+            }
+
+            .post-images.double,
+            .post-images.multiple {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        /* Loading */
+        .loading {
+            text-align: center;
+            padding: 48px;
+        }
+
+        .spinner {
+            width: 40px;
+            height: 40px;
+            border: 4px solid var(--yt-spec-outline);
+            border-top-color: var(--yt-spec-call-to-action);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body>
+    <!-- Channel Header -->
+    <header class="channel-header">
+        {% if has_banner %}
+        <img src="assets/channel_banner.jpg" alt="Channel Banner" class="channel-banner">
+        {% else %}
+        <div class="channel-banner-placeholder"></div>
+        {% endif %}
+        
+        <div class="channel-info">
+            {% if has_avatar %}
+            <img src="assets/channel_avatar.jpg" alt="Channel Avatar" class="channel-avatar">
+            {% else %}
+            <div class="channel-avatar-placeholder">
+                {% if channel %}{{ channel.name[0] if channel.name else '?' }}{% else %}?{% endif %}
+            </div>
+            {% endif %}
+            
+            <div class="channel-details">
+                <h1>{% if channel %}{{ channel.name }}{% else %}YouTube 社群貼文存檔{% endif %}</h1>
+                {% if channel and channel.handle %}
+                <div class="channel-handle">{{ channel.handle }}</div>
+                {% endif %}
+                <div class="channel-stats">
+                    {{ statistics.total }} 則貼文 • 
+                    {{ statistics.public }} 則公開 • 
+                    {{ statistics.members }} 則會員限定
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- Navigation / Filters -->
+    <nav class="nav-container">
+        <div class="nav-content">
+            <button class="filter-btn active" data-filter="all">全部</button>
+            <button class="filter-btn" data-filter="public">公開貼文</button>
+            <button class="filter-btn" data-filter="members">會員限定</button>
+            <button class="filter-btn" data-filter="images">含圖片</button>
+            <button class="filter-btn" data-filter="polls">含投票</button>
+            <input type="text" class="search-input" placeholder="搜尋貼文內容..." id="searchInput">
+        </div>
+    </nav>
+
+    <!-- Main Content -->
+    <main class="main-content">
+        <div class="archive-info">
+            📦 存檔於 {{ archive_date }} • 以估計發文時間排序（由新到舊）
+        </div>
+
+        <div id="postsContainer">
+            {% for post in posts %}
+            <article class="post-card" 
+                     data-members="{{ 'true' if post.is_members else 'false' }}"
+                     data-has-images="{{ 'true' if post.local_images else 'false' }}"
+                     data-has-poll="{{ 'true' if post.poll else 'false' }}"
+                     data-text="{{ post.text|lower }}">
+                <div class="post-header">
+                    {% if has_avatar %}
+                    <img src="assets/channel_avatar.jpg" alt="Avatar" class="post-avatar">
+                    {% else %}
+                    <div class="post-avatar-placeholder"></div>
+                    {% endif %}
+                    
+                    <div class="post-meta">
+                        <div class="post-author">
+                            {% if channel %}{{ channel.name }}{% else %}頻道{% endif %}
+                        </div>
+                        <div class="post-date">
+                            {{ post.relative_date }}
+                            {% if post.estimated_date %}
+                            • 約 {{ post.estimated_date|format_date }}
+                            {% endif %}
+                        </div>
+                    </div>
+                    
+                    {% if post.is_members %}
+                    <span class="members-badge">
+                        <svg viewBox="0 0 24 24" fill="currentColor">
+                            <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/>
+                        </svg>
+                        會員限定
+                    </span>
+                    {% endif %}
+                </div>
+                
+                <div class="post-content">{{ post.text|format_text }}</div>
+                
+                {% if post.local_images %}
+                <div class="post-images {% if post.local_images|length == 1 %}single{% elif post.local_images|length == 2 %}double{% else %}multiple{% endif %}">
+                    {% for image in post.local_images %}
+                    <img src="assets/posts/{{ post.post_id }}/{{ image }}" 
+                         alt="Post image" 
+                         class="post-image"
+                         onclick="openModal(this.src)">
+                    {% endfor %}
+                </div>
+                {% endif %}
+                
+                {% if post.poll %}
+                <div class="poll-container">
+                    {% for choice in post.poll.choices %}
+                    <div class="poll-option">
+                        <div class="poll-bar" style="width: {{ choice.percentage|default(0) }}%"></div>
+                        <div class="poll-text">
+                            <span>{{ choice.text }}</span>
+                            <span>{{ choice.percentage|default('?') }}%</span>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+                {% endif %}
+                
+                <div class="post-actions">
+                    <span class="action-btn">
+                        <svg viewBox="0 0 24 24" fill="currentColor">
+                            <path d="M1 21h4V9H1v12zm22-11c0-1.1-.9-2-2-2h-6.31l.95-4.57.03-.32c0-.41-.17-.79-.44-1.06L14.17 1 7.59 7.59C7.22 7.95 7 8.45 7 9v10c0 1.1.9 2 2 2h9c.83 0 1.54-.5 1.84-1.22l3.02-7.05c.09-.23.14-.47.14-.73v-2z"/>
+                        </svg>
+                        {{ post.num_thumbs_up }}
+                    </span>
+                    <span class="action-btn">
+                        <svg viewBox="0 0 24 24" fill="currentColor">
+                            <path d="M21.99 4c0-1.1-.89-2-1.99-2H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h14l4 4-.01-18zM18 14H6v-2h12v2zm0-3H6V9h12v2zm0-3H6V6h12v2z"/>
+                        </svg>
+                        {{ post.num_comments }}
+                    </span>
+                    <a href="{{ post.url }}" target="_blank" rel="noopener noreferrer" class="post-link">
+                        查看原始貼文 →
+                    </a>
+                </div>
+            </article>
+            {% endfor %}
+        </div>
+
+        {% if not posts %}
+        <div class="empty-state">
+            <svg viewBox="0 0 24 24" fill="currentColor">
+                <path d="M20 2H4c-1.1 0-1.99.9-1.99 2L2 22l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zM6 9h12v2H6V9zm8 5H6v-2h8v2zm4-6H6V6h12v2z"/>
+            </svg>
+            <p>尚無貼文資料</p>
+        </div>
+        {% endif %}
+    </main>
+
+    <!-- Image Modal -->
+    <div class="modal" id="imageModal" onclick="closeModal()">
+        <span class="modal-close">&times;</span>
+        <img class="modal-content" id="modalImage">
+    </div>
+
+    <script>
+        // Filter functionality
+        const filterBtns = document.querySelectorAll('.filter-btn');
+        const posts = document.querySelectorAll('.post-card');
+        const searchInput = document.getElementById('searchInput');
+
+        filterBtns.forEach(btn => {
+            btn.addEventListener('click', () => {
+                filterBtns.forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+                filterPosts();
+            });
+        });
+
+        searchInput.addEventListener('input', filterPosts);
+
+        function filterPosts() {
+            const activeFilter = document.querySelector('.filter-btn.active').dataset.filter;
+            const searchTerm = searchInput.value.toLowerCase();
+
+            posts.forEach(post => {
+                let show = true;
+
+                // Apply filter
+                switch (activeFilter) {
+                    case 'public':
+                        show = post.dataset.members === 'false';
+                        break;
+                    case 'members':
+                        show = post.dataset.members === 'true';
+                        break;
+                    case 'images':
+                        show = post.dataset.hasImages === 'true';
+                        break;
+                    case 'polls':
+                        show = post.dataset.hasPoll === 'true';
+                        break;
+                }
+
+                // Apply search
+                if (show && searchTerm) {
+                    show = post.dataset.text.includes(searchTerm);
+                }
+
+                post.style.display = show ? 'block' : 'none';
+            });
+
+            // Show empty state if no posts visible
+            const visiblePosts = document.querySelectorAll('.post-card[style="display: block"], .post-card:not([style])');
+            const container = document.getElementById('postsContainer');
+            
+            let emptyState = container.querySelector('.empty-state');
+            if (!emptyState) {
+                emptyState = document.createElement('div');
+                emptyState.className = 'empty-state';
+                emptyState.innerHTML = '<p>沒有符合條件的貼文</p>';
+            }
+            
+            if (Array.from(posts).every(p => p.style.display === 'none')) {
+                if (!container.contains(emptyState)) {
+                    container.appendChild(emptyState);
+                }
+            } else {
+                if (container.contains(emptyState)) {
+                    container.removeChild(emptyState);
+                }
+            }
+        }
+
+        // Modal functionality
+        function openModal(src) {
+            const modal = document.getElementById('imageModal');
+            const modalImg = document.getElementById('modalImage');
+            modal.classList.add('active');
+            modalImg.src = src;
+            document.body.style.overflow = 'hidden';
+        }
+
+        function closeModal() {
+            const modal = document.getElementById('imageModal');
+            modal.classList.remove('active');
+            document.body.style.overflow = '';
+        }
+
+        // Close modal with escape key
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') {
+                closeModal();
+            }
+        });
+    </script>
+</body>
+</html>
