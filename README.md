@@ -2,8 +2,11 @@
 
 [![Python 3.10+](https://img.shields.io/badge/python-3.10+-blue.svg)](https://www.python.org/downloads/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![PyPI version](https://img.shields.io/pypi/v/yt-community-post-rebuilder.svg)](https://pypi.org/project/yt-community-post-rebuilder/)
 
 📺 YouTube 社群貼文存檔工具 - 將 YouTube 頻道的社群貼文完整備份，並產生一個仿 YouTube 風格的離線 HTML 檢視器。
+
+![Preview](docs/preview.png)
 
 ## ✨ 功能特點
 
