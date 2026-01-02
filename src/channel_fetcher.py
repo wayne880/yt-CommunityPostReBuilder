@@ -6,6 +6,7 @@ Fetches channel metadata including avatar and banner images.
 import json
 import os
 import re
+import time
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Optional
@@ -61,12 +62,21 @@ class ChannelInfo:
 class ChannelFetcher:
     """Fetches channel information from YouTube."""
     
-    def __init__(self, output_dir: str = "archive-output"):
+    def __init__(
+        self, 
+        output_dir: str = "archive-output",
+        browser_profile: Optional[str] = None,
+        driver: str = "chrome",
+        headless: bool = True,
+    ):
         self.output_dir = Path(output_dir)
+        self.browser_profile = browser_profile
+        self.driver_type = driver
+        self.headless = headless
         self.session = requests.Session()
         self.session.headers.update({
             "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
-            "Accept-Language": "en-US,en;q=0.9",
+            # Don't set Accept-Language to get original channel description
         })
     
     def fetch_channel_info(self, channel_url: str) -> Optional[ChannelInfo]:
@@ -92,6 +102,17 @@ class ChannelFetcher:
             channel_info = self._parse_channel_page(html, channel_url)
             
             if channel_info:
+                # Fetch full description from /about page
+                about_description = self._fetch_about_description(channel_url)
+                if about_description:
+                    channel_info.description = about_description
+                
+                # If no banner URL found, try using Selenium
+                if not channel_info.banner_url:
+                    banner_url = self._fetch_banner_with_selenium(channel_url)
+                    if banner_url:
+                        channel_info.banner_url = banner_url
+                
                 # Download images
                 self._download_images(channel_info)
                 
@@ -102,6 +123,152 @@ class ChannelFetcher:
             
         except Exception as e:
             print(f"Error fetching channel info: {e}")
+            return None
+    
+    def _fetch_about_description(self, channel_url: str) -> Optional[str]:
+        """Fetch full channel description from the /about page."""
+        try:
+            about_url = channel_url + "/about"
+            response = self.session.get(about_url)
+            response.raise_for_status()
+            html = response.text
+            
+            # Try to find ytInitialData JSON
+            match = re.search(r'var ytInitialData = ({.*?});</script>', html, re.DOTALL)
+            if not match:
+                match = re.search(r'ytInitialData"\s*:\s*({.*?})\s*[,}]</script>', html, re.DOTALL)
+            
+            if match:
+                data = json.loads(match.group(1))
+                
+                # First try: metadata.channelMetadataRenderer.description (most reliable)
+                metadata = data.get("metadata", {}).get("channelMetadataRenderer", {})
+                if metadata and metadata.get("description"):
+                    return metadata["description"]
+                
+                # Second try: Navigate to the about tab content
+                # Path: contents.twoColumnBrowseResultsRenderer.tabs[].tabRenderer.content
+                tabs = data.get("contents", {}).get("twoColumnBrowseResultsRenderer", {}).get("tabs", [])
+                
+                for tab in tabs:
+                    tab_renderer = tab.get("tabRenderer", {})
+                    if tab_renderer.get("title") == "About" or tab_renderer.get("selected"):
+                        content = tab_renderer.get("content", {})
+                        
+                        # Try sectionListRenderer path
+                        section_list = content.get("sectionListRenderer", {}).get("contents", [])
+                        for section in section_list:
+                            item_section = section.get("itemSectionRenderer", {}).get("contents", [])
+                            for item in item_section:
+                                # channelAboutFullMetadataRenderer contains the full description
+                                about_renderer = item.get("channelAboutFullMetadataRenderer", {})
+                                if about_renderer:
+                                    desc = about_renderer.get("description", {})
+                                    if "simpleText" in desc:
+                                        return desc["simpleText"]
+                                    elif "runs" in desc:
+                                        return "".join(run.get("text", "") for run in desc["runs"])
+                    
+        except Exception as e:
+            print(f"Error fetching about page: {e}")
+        
+        return None
+    
+    def _fetch_banner_with_selenium(self, channel_url: str) -> Optional[str]:
+        """Fetch banner URL using Selenium for better reliability."""
+        try:
+            from selenium import webdriver
+            from selenium.webdriver.common.by import By
+            from selenium.webdriver.chrome.options import Options as ChromeOptions
+            from selenium.webdriver.firefox.options import Options as FirefoxOptions
+            
+            # Setup driver
+            if self.driver_type == "firefox":
+                options = FirefoxOptions()
+                if self.headless:
+                    options.add_argument("--headless")
+                if self.browser_profile:
+                    options.add_argument("-profile")
+                    options.add_argument(self.browser_profile)
+                driver = webdriver.Firefox(options=options)
+            else:
+                options = ChromeOptions()
+                if self.headless:
+                    options.add_argument("--headless")
+                if self.browser_profile:
+                    options.add_argument(f"--user-data-dir={self.browser_profile}")
+                driver = webdriver.Chrome(options=options)
+            
+            banner_url = None
+            
+            try:
+                driver.get(channel_url)
+                time.sleep(3)  # Wait for page to load
+                
+                # Try to find banner image
+                # Method 1: Look for yt-image-banner
+                try:
+                    banner_elements = driver.find_elements(By.CSS_SELECTOR, "yt-image-banner img")
+                    for elem in banner_elements:
+                        src = elem.get_attribute("src")
+                        if src and "yt3.googleusercontent.com" in src:
+                            banner_url = src
+                            break
+                except:
+                    pass
+                
+                # Method 2: Look for banner in style attribute
+                if not banner_url:
+                    try:
+                        banner_container = driver.find_element(By.ID, "page-header-banner")
+                        style = banner_container.get_attribute("style")
+                        if style:
+                            match = re.search(r'url\(["\']?(https://[^"\')\s]+)["\']?\)', style)
+                            if match:
+                                banner_url = match.group(1)
+                    except:
+                        pass
+                
+                # Method 3: Look for any large banner-like image
+                if not banner_url:
+                    try:
+                        imgs = driver.find_elements(By.TAG_NAME, "img")
+                        for img in imgs:
+                            src = img.get_attribute("src") or ""
+                            # Banner URLs typically have specific patterns
+                            if "yt3.googleusercontent.com" in src and ("banner" in src.lower() or "=w" in src):
+                                width = img.get_attribute("width")
+                                if width and int(width) > 800:
+                                    banner_url = src
+                                    break
+                    except:
+                        pass
+                
+                # Method 4: Extract from page source ytInitialData
+                if not banner_url:
+                    try:
+                        page_source = driver.page_source
+                        match = re.search(r'"banner":\s*\{"thumbnails":\s*\[(.*?)\]', page_source)
+                        if match:
+                            thumbnails_str = match.group(1)
+                            url_match = re.findall(r'"url":\s*"([^"]+)"', thumbnails_str)
+                            if url_match:
+                                banner_url = url_match[-1]  # Get highest quality (last one)
+                    except:
+                        pass
+                
+                if banner_url:
+                    # Upgrade to high quality
+                    banner_url = self._get_high_quality_banner(banner_url)
+                    print(f"   找到橫幅圖片")
+                
+            finally:
+                driver.quit()
+            
+            return banner_url
+            
+        except Exception as e:
+            print(f"Warning: Could not fetch banner with Selenium: {e}")
             return None
     
     def _normalize_channel_url(self, url: str) -> str:

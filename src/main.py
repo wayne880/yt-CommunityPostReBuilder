@@ -179,7 +179,12 @@ def run_archiver(
         # Step 1: Fetch channel info (avatar, banner)
         if fetch_channel_info and url:
             print("\n📸 正在獲取頻道資訊...")
-            fetcher = ChannelFetcher(output_dir=output_dir)
+            fetcher = ChannelFetcher(
+                output_dir=output_dir,
+                browser_profile=browser_profile,
+                driver=driver,
+                headless=headless,
+            )
             channel_info = fetcher.fetch_channel_info(url)
             
             if channel_info:

@@ -96,6 +96,63 @@
             margin-top: 4px;
         }
 
+        .channel-description {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 16px 24px;
+            background-color: var(--yt-spec-brand-background-secondary);
+            border-bottom: 1px solid var(--yt-spec-outline);
+        }
+
+        .channel-description-toggle {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            cursor: pointer;
+            color: var(--yt-spec-text-secondary);
+            font-size: 14px;
+            user-select: none;
+        }
+
+        .channel-description-toggle:hover {
+            color: var(--yt-spec-text-primary);
+        }
+
+        .channel-description-toggle svg {
+            width: 20px;
+            height: 20px;
+            transition: transform 0.2s;
+        }
+
+        .channel-description-toggle.expanded svg {
+            transform: rotate(180deg);
+        }
+
+        .channel-description-content {
+            display: none;
+            margin-top: 12px;
+            padding: 16px;
+            background-color: var(--yt-spec-10-percent-layer);
+            border-radius: 8px;
+            white-space: pre-wrap;
+            font-size: 14px;
+            line-height: 1.6;
+            color: var(--yt-spec-text-primary);
+        }
+
+        .channel-description-content.show {
+            display: block;
+        }
+
+        .channel-description-content a {
+            color: var(--yt-spec-call-to-action);
+            text-decoration: none;
+        }
+
+        .channel-description-content a:hover {
+            text-decoration: underline;
+        }
+
         /* Navigation / Filters */
         .nav-container {
             background-color: var(--yt-spec-brand-background-secondary);
@@ -319,6 +376,13 @@
             justify-content: space-between;
         }
 
+        .poll-total {
+            margin-top: 8px;
+            font-size: 12px;
+            color: var(--yt-spec-text-secondary);
+            text-align: right;
+        }
+
         /* Post Actions */
         .post-actions {
             display: flex;
@@ -483,6 +547,21 @@
         </div>
     </header>
 
+    <!-- Channel Description -->
+    {% if channel and channel.description %}
+    <section class="channel-description">
+        <div class="channel-description-toggle" onclick="toggleDescription()">
+            <svg viewBox="0 0 24 24" fill="currentColor">
+                <path d="M7.41 8.59L12 13.17l4.59-4.58L18 10l-6 6-6-6 1.41-1.41z"/>
+            </svg>
+            <span>頻道簡介</span>
+        </div>
+        <div class="channel-description-content" id="descriptionContent">
+            {{ channel.description|format_text|safe }}
+        </div>
+    </section>
+    {% endif %}
+
     <!-- Navigation / Filters -->
     <nav class="nav-container">
         <div class="nav-content">
@@ -537,7 +616,7 @@
                     {% endif %}
                 </div>
                 
-                <div class="post-content">{{ post.text|format_text }}</div>
+                <div class="post-content">{{ post.text|format_text|safe }}</div>
                 
                 {% if post.local_images %}
                 <div class="post-images {% if post.local_images|length == 1 %}single{% elif post.local_images|length == 2 %}double{% else %}multiple{% endif %}">
@@ -552,15 +631,18 @@
                 
                 {% if post.poll %}
                 <div class="poll-container">
-                    {% for choice in post.poll.choices %}
+                    {% for entry in post.poll.entries %}
                     <div class="poll-option">
-                        <div class="poll-bar" style="width: {{ choice.percentage|default(0) }}%"></div>
+                        <div class="poll-bar" style="width: {{ entry.percentage|default(0) }}%"></div>
                         <div class="poll-text">
-                            <span>{{ choice.text }}</span>
-                            <span>{{ choice.percentage|default('?') }}%</span>
+                            <span>{{ entry.option }}</span>
+                            <span>{{ entry.percentage|default('?') }}%</span>
                         </div>
                     </div>
                     {% endfor %}
+                    {% if post.poll.total_votes %}
+                    <div class="poll-total">{{ post.poll.total_votes }}</div>
+                    {% endif %}
                 </div>
                 {% endif %}
                 
@@ -668,6 +750,14 @@
                     container.removeChild(emptyState);
                 }
             }
+        }
+
+        // Toggle channel description
+        function toggleDescription() {
+            const toggle = document.querySelector('.channel-description-toggle');
+            const content = document.getElementById('descriptionContent');
+            toggle.classList.toggle('expanded');
+            content.classList.toggle('show');
         }
 
         // Modal functionality

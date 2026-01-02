@@ -3,6 +3,7 @@ Data Processor Module
 Handles sorting and organizing community posts.
 """
 
+import json
 from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
@@ -60,8 +61,8 @@ class DataProcessor:
         member_posts = [p for p in posts if p.is_members]
         public_posts = [p for p in posts if not p.is_members]
         
-        # Sort all posts by date
-        all_sorted = self._sort_by_date(posts)
+        # Sort all posts by order
+        all_sorted = self._sort_by_order(posts)
         
         return ProcessedData(
             channel_info=channel_info,
@@ -71,46 +72,87 @@ class DataProcessor:
             archive_date=datetime.now(),
         )
     
+    def _load_post_order(self) -> dict[str, int]:
+        """Load post order from post_order.json if it exists."""
+        order_file = self.output_dir / "post_order.json"
+        if order_file.exists():
+            try:
+                with open(order_file, "r", encoding="utf-8") as f:
+                    data = json.load(f)
+                    return {item["post_id"]: item["order"] for item in data.get("posts", [])}
+            except (json.JSONDecodeError, IOError):
+                pass
+        return {}
+    
+    def _sort_by_order(
+        self,
+        posts: list[CommunityPost],
+        newest_first: bool = True,
+    ) -> list[CommunityPost]:
+        """
+        Sort posts by their recorded order from post_order.json.
+        
+        Falls back to when_archived timestamp if order file doesn't exist.
+        """
+        post_order = self._load_post_order()
+        
+        if post_order:
+            # Use recorded order (lower number = newer post)
+            def get_sort_key(post: CommunityPost):
+                if post.post_id in post_order:
+                    return (0, post_order[post.post_id])
+                # Posts not in order file go to the end
+                return (1, 0)
+            
+            return sorted(posts, key=get_sort_key, reverse=not newest_first)
+        else:
+            # Fall back to when_archived sorting
+            return self._sort_by_date(posts, newest_first)
+    
     def _sort_by_date(
         self,
         posts: list[CommunityPost],
-        descending: bool = True,
+        newest_first: bool = True,
     ) -> list[CommunityPost]:
         """
-        Sort posts by estimated date.
+        Sort posts by archive order (which reflects the original page order).
         
-        Since YouTube doesn't provide exact timestamps, we use:
-        1. Estimated date from relative date parsing
-        2. Archive timestamp as fallback
-        3. Original order if neither available
+        Since YouTube displays posts from newest to oldest (top to bottom),
+        and the archiver processes them in that order, the `when_archived`
+        timestamp reflects the original display order:
+        - Earlier `when_archived` = newer post (appeared higher on page)
+        - Later `when_archived` = older post (appeared lower on page)
         
         Args:
             posts: List of posts to sort
-            descending: If True, newest first; if False, oldest first
+            newest_first: If True, newest first; if False, oldest first
             
         Returns:
             Sorted list of posts
         """
         def get_sort_key(post: CommunityPost):
-            # Primary: estimated date from relative date
-            if post.estimated_date:
-                return (0, post.estimated_date)
-            
-            # Secondary: archive timestamp
+            # Primary: use archive timestamp as it reflects page order
+            # Earlier archived = newer post (was at top of page)
             if post.when_archived:
                 try:
                     # Parse ISO format timestamp
                     archived_dt = datetime.fromisoformat(
-                        post.when_archived.replace("+00:00", "")
+                        post.when_archived.replace("+00:00", "").replace("Z", "")
                     )
-                    return (1, archived_dt)
+                    return (0, archived_dt)
                 except ValueError:
                     pass
+            
+            # Secondary: estimated date from relative date (less accurate)
+            if post.estimated_date:
+                return (1, post.estimated_date)
             
             # Fallback: use a very old date to sort at end
             return (2, datetime.min)
         
-        return sorted(posts, key=get_sort_key, reverse=descending)
+        # Earlier when_archived = newer post, so ascending order gives newest first
+        # reverse=True means oldest first (larger timestamps first)
+        return sorted(posts, key=get_sort_key, reverse=not newest_first)
     
     def filter_by_date_range(
         self,
