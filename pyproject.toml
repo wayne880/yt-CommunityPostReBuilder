@@ -3,19 +3,40 @@ requires = ["hatchling"]
 build-backend = "hatchling.build"
 
 [project]
-name = "youtube-community-post-viewer"
+name = "yt-community-post-rebuilder"
 version = "1.0.0"
-description = "A tool to archive YouTube community posts and generate a static HTML viewer"
+description = "YouTube 社群貼文存檔工具 - 將 YouTube 頻道的社群貼文完整備份並產生離線 HTML 檢視器"
 readme = "README.md"
 requires-python = ">=3.10"
 license = "MIT"
-keywords = ["youtube", "community", "posts", "archiver", "viewer"]
+keywords = ["youtube", "community", "posts", "archiver", "viewer", "backup"]
+authors = [
+    { name = "Wayne" }
+]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Environment :: Console",
+    "Intended Audience :: End Users/Desktop",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Internet",
+    "Topic :: Multimedia",
+]
 dependencies = [
     "yt-community-post-archiver>=0.1.8",
     "requests>=2.31.0",
     "Jinja2>=3.1.2",
     "python-dateutil>=2.8.2",
 ]
+
+[project.urls]
+Homepage = "https://github.com/wayne880/yt-CommunityPostReBuilder"
+Repository = "https://github.com/wayne880/yt-CommunityPostReBuilder"
+Issues = "https://github.com/wayne880/yt-CommunityPostReBuilder/issues"
 
 [project.optional-dependencies]
 dev = [

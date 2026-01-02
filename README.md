@@ -23,6 +23,14 @@
 
 ## 🚀 安裝
 
+### 方法一：從 PyPI 安裝（推薦）
+
+```bash
+pip install yt-community-post-rebuilder
+```
+
+### 方法二：從原始碼安裝
+
 ```bash
 # 複製專案
 git clone https://github.com/user/yt-CommunityPostReBuilder.git
