@@ -57,41 +57,54 @@ pip install -e .
 yt-community-viewer "https://www.youtube.com/@ChannelName/posts"
 ```
 
-### 獲取會員貼文（推薦方式）
+### 獲取會員貼文
 
-使用瀏覽器設定檔是最可靠的方式：
+#### 方法一：Firefox 瀏覽器設定檔（推薦）
+
+使用 Firefox 設定檔是最可靠的方式：
 
 **Windows (PowerShell):**
 
 ```powershell
-# Firefox
 yt-community-viewer "https://www.youtube.com/@ChannelName/posts" -d firefox -p "C:\Users\你的用戶名\AppData\Roaming\Mozilla\Firefox\Profiles\xxxxx.default-release"
-
-# Chrome
-yt-community-viewer "https://www.youtube.com/@ChannelName/posts" -d chrome -p "C:\Users\你的用戶名\AppData\Local\Google\Chrome\User Data"
 ```
 
 **Linux / macOS:**
 
 ```bash
-# Firefox
 yt-community-viewer "https://www.youtube.com/@ChannelName/posts" \
     -d firefox \
     -p ~/.mozilla/firefox/xxxxx.default-release
-
-# Chrome
-yt-community-viewer "https://www.youtube.com/@ChannelName/posts" \
-    -d chrome \
-    -p ~/.config/google-chrome
 ```
 
 > 💡 **如何找到 Firefox 設定檔路徑？**
 > 在 Firefox 網址列輸入 `about:profiles`，找到「根目錄」即可。
 
-### 使用 Cookies 檔案
+#### 方法二：Cookies 檔案（適用於 Chrome）
+
+Chrome 由於安全限制，無法直接使用設定檔登入。建議改用 cookies 檔案：
 
 ```bash
+# 相對路徑
+yt-community-viewer "https://www.youtube.com/@ChannelName/posts" -d chrome -c cookies.txt
+
+# 絕對路徑也可以
+yt-community-viewer "https://www.youtube.com/@ChannelName/posts" -d chrome -c "C:\path\to\cookies.txt"
+```
+
+> 💡 **如何取得 Cookies 檔案？**
+> 使用瀏覽器擴充套件如 [Get cookies.txt LOCALLY](https://chromewebstore.google.com/detail/get-cookiestxt-locally/cclelndahbckbenkjhflpdbgdldlbecc) 匯出 Netscape 格式的 cookies。
+>
+> ⚠️ Cookies 可能會過期，建議優先使用 Firefox 設定檔方式。
+
+### 使用 Cookies 檔案（通用）
+
+```bash
+# 相對路徑
 yt-community-viewer "https://www.youtube.com/@ChannelName/posts" -c cookies.txt
+
+# 絕對路徑也可以
+yt-community-viewer "https://www.youtube.com/@ChannelName/posts" -c "C:\path\to\cookies.txt"
 ```
 
 > ⚠️ Cookies 可能會過期，建議使用瀏覽器設定檔方式。
@@ -222,7 +235,8 @@ run_archiver(
 ### 橫幅無法下載
 
 - 部分頻道可能沒有設定橫幅
-- 確保有提供瀏覽器設定檔（`-p` 參數）
+- 確保有提供瀏覽器設定檔（`-p` 參數）或 cookies 檔案（`-c` 參數）
+- 工具會自動使用 Selenium 嘗試獲取橫幅圖片
 
 ## 🙏 致謝
 

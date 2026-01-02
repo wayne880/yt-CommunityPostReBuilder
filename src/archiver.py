@@ -86,7 +86,8 @@ class PostArchiver:
         self.output_dir = Path(output_dir)
         self.browser_profile = browser_profile
         self.profile_name = profile_name
-        self.cookies_file = cookies_file
+        # Convert cookies file to absolute path to avoid issues with subprocess
+        self.cookies_file = str(Path(cookies_file).resolve()) if cookies_file else None
         self.driver = driver
         self.headless = headless
     
