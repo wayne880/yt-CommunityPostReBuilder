@@ -187,6 +187,8 @@ class ChannelFetcher:
                 options = FirefoxOptions()
                 if self.headless:
                     options.add_argument("--headless")
+                    options.add_argument("--width=1920")
+                    options.add_argument("--height=1080")
                 if self.browser_profile:
                     options.add_argument("-profile")
                     options.add_argument(self.browser_profile)
@@ -194,7 +196,8 @@ class ChannelFetcher:
             else:
                 options = ChromeOptions()
                 if self.headless:
-                    options.add_argument("--headless")
+                    options.add_argument("--headless=new")
+                    options.add_argument("--window-size=1920,1080")
                 if self.browser_profile:
                     options.add_argument(f"--user-data-dir={self.browser_profile}")
                 driver = webdriver.Chrome(options=options)
