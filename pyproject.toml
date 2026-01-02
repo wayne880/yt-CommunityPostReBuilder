@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "yt-community-post-rebuilder"
-version = "1.0.1"
+version = "1.0.2"
 description = "YouTube 社群貼文存檔工具 - 將 YouTube 頻道的社群貼文完整備份並產生離線 HTML 檢視器"
 readme = "README.md"
 requires-python = ">=3.10"
